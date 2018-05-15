@@ -50,6 +50,10 @@ parser.add_argument('--checkpoint', type=str, default='',
   help="""\
   Path of a checkpoint to restore.
 """)
+parser.add_argument('--start_epoch', type=int, default=0,
+  help="""\
+  Start epoch when loading a checkpoint.
+""")
 parser.add_argument('--alias', type=str, default='base',
   help="""\
   Alias of the model.
@@ -150,15 +154,10 @@ if FLAGS.checkpoint:
 print("Start training...")
 
 lr_index = 0
-for epoch in trange(sum(EPOCHS)):
+for epoch in trange(FLAGS.start_epoch, sum(EPOCHS)):
     if epoch > sum(EPOCHS[:lr_index+1]):
         lr_index += 1
     lr = LEARNING_RATES[lr_index]
-    # Check if we need to save
-    if epoch % FLAGS.save_interval:
-        checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '.ckpt')
-        tf.logging.info('Saving to "%s-%d"', checkpoint_path, epoch)
-        saver.save(sess, checkpoint_path, write_meta_graph=True)
     # Compute batch
     closses, rlosses, nlosses = [], [], []
     for bindex in range(0, len(dataset), FLAGS.batch_size):
@@ -174,3 +173,15 @@ for epoch in trange(sum(EPOCHS)):
         learning_rate: lr
     })
     writer.add_summary(summary, epoch)
+    # Check if we need to save
+    if epoch % FLAGS.save_interval == 0:
+        checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '-' + str(epoch) + '.ckpt')
+        tf.logging.info('Saving to "%s-%d"', checkpoint_path, epoch)
+        saver.save(sess, checkpoint_path, write_meta_graph=True)
+
+# Save the last model
+checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '-' + str(sum(EPOCHS)) + '.ckpt')
+tf.logging.info('Saving to "%s-%d"', checkpoint_path, epoch)
+saver.save(sess, checkpoint_path, write_meta_graph=True)
+
+print("Bye bye")

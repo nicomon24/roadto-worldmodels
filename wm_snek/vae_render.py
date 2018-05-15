@@ -90,7 +90,7 @@ env.seed(42)
 def add_reco(obs):
     # Compute reconstruction
     reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
-    return np.concatenate([obs/255, reco], axis=1)
+    return np.concatenate([obs/255, np.ones((80, 4, 3)), reco], axis=1)
 
 obs = env.reset()
 
