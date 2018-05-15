@@ -14,6 +14,10 @@ parser.add_argument('--train_size', type=int, default=1000,
   help="""\
   Number of samples of the training set.
 """)
+parser.add_argument('--val_size', type=int, default=1000,
+  help="""\
+  Number of samples of the training set.
+""")
 parser.add_argument('--batch_size', type=int, default=32,
   help="""\
   Size of the image batches.
@@ -58,6 +62,10 @@ parser.add_argument('--alias', type=str, default='base',
   help="""\
   Alias of the model.
 """)
+parser.add_argument('--val_step', type=int, default=10,
+  help="""\
+  Interval at which we perform the validation.
+""")
 
 FLAGS, unparsed = parser.parse_known_args()
 LEARNING_RATES = list(map(float, FLAGS.learning_rates.split(',')))
@@ -80,7 +88,19 @@ for i in trange(FLAGS.train_size):
         env.reset()
     dataset.append(obs / 255)
 np.random.shuffle(dataset)
-print("Generated", len(dataset),"samples.")
+print("Generated trainset of", len(dataset),"samples.")
+
+valset = []
+obs = env.reset()
+for i in trange(FLAGS.val_size):
+    action = env.action_space.sample()
+    obs, reward, done, info = env.step(action)
+    if done:
+        env.reset()
+    valset.append(obs / 255)
+np.random.shuffle(valset)
+print("Generated valset of", len(valset),"samples.")
+
 
 print("Network creation...")
 
@@ -143,7 +163,8 @@ sess.run(tf.global_variables_initializer())
 # Saver and summaries
 saver = tf.train.Saver(tf.global_variables(), max_to_keep=40)
 merged_summaries = tf.summary.merge([tf_mrl_summary, tf_mnl_summary, tf_mcl_summary, lr_summary])
-writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, FLAGS.alias))
+train_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, FLAGS.alias + '_train'))
+val_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, FLAGS.alias + '_val'))
 
 # Check if we need to load a checkpoint
 if FLAGS.checkpoint:
@@ -172,7 +193,23 @@ for epoch in trange(FLAGS.start_epoch, sum(EPOCHS)):
         tf_mcl: np.mean(closses),
         learning_rate: lr
     })
-    writer.add_summary(summary, epoch)
+    train_writer.add_summary(summary, epoch)
+    # Validation
+    if epoch % FLAGS.val_step == 0:
+        closses, rlosses, nlosses = [], [], []
+        for bindex in range(0, len(valset), FLAGS.batch_size):
+            batch = valset[bindex:bindex+FLAGS.batch_size]
+            _rloss, _nloss, _closs, _ = sess.run([reconstruction_loss, reg_loss, complete_loss, optimizer], feed_dict = {X: batch, keep_prob:FLAGS.dropout, learning_rate:lr, batch_size:len(batch)})
+            closses.append(_closs)
+            rlosses.append(_rloss)
+            nlosses.append(_nloss)
+        summary = sess.run(merged_summaries, feed_dict={
+            tf_mrl: np.mean(rlosses),
+            tf_mnl: np.mean(nlosses),
+            tf_mcl: np.mean(closses),
+            learning_rate: lr
+            })
+        val_writer.add_summary(summary, epoch)
     # Check if we need to save
     if epoch % FLAGS.save_interval == 0:
         checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '-' + str(epoch) + '.ckpt')
