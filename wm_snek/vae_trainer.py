@@ -131,7 +131,7 @@ with tf.variable_scope("encoder", reuse=None):
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
     deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop2.shape[1], drop2.shape[2], drop2.shape[3]))
+    deflat4d = tf.reshape(deflat, shape=(-1, drop3.shape[1], drop3.shape[2], drop3.shape[3]))
     deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
@@ -145,6 +145,7 @@ reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
 tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
+#reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
 reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
 tf_mnl = tf.placeholder(tf.float32, ())
 tf_mnl_summary = tf.summary.scalar('mean_normalization_loss', tf_mnl)
