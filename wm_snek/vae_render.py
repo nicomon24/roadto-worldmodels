@@ -34,9 +34,9 @@ batch_size = tf.placeholder(dtype=tf.int32, shape=(), name='batch_size')
 with tf.variable_scope("encoder", reuse=None):
     conv1 = tf.layers.conv2d(X, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop1 = tf.nn.dropout(conv1, keep_prob)
-    conv2 = tf.layers.conv2d(drop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv2 = tf.layers.conv2d(drop1, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop2 = tf.nn.dropout(conv2, keep_prob)
-    conv3 = tf.layers.conv2d(drop2, filters=64, kernel_size=4, strides=1, padding='same', activation=tf.nn.relu)
+    conv3 = tf.layers.conv2d(drop2, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop3 = tf.nn.dropout(conv3, keep_prob)
     flat = tf.layers.flatten(drop3)
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
@@ -47,15 +47,14 @@ with tf.variable_scope("encoder", reuse=None):
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
     deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop2.shape[1], drop2.shape[2], drop2.shape[3]))
-    deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=64, kernel_size=4, strides=1, padding='same', activation=tf.nn.relu)
+    deflat4d = tf.reshape(deflat, shape=(-1, drop3.shape[1], drop3.shape[2], drop3.shape[3]))
+    deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop2 = tf.nn.dropout(deconv2, keep_prob)
     deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop3 = tf.nn.dropout(deconv3, keep_prob)
     rebuild = tf.reshape(dedrop3, shape=(-1, 80, 80, 3))
-
 # Losses
 reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
 tf_mrl = tf.placeholder(tf.float32, ())
