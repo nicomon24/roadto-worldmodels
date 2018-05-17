@@ -8,6 +8,7 @@
 '''
 
 import gym, time, argparse, cv2
+from gym import wrappers, logger
 import numpy as np
 from tqdm import trange
 import pickle
@@ -38,6 +39,7 @@ env.seed(FLAGS.seed)
 np.random.seed(FLAGS.seed)
 
 dataset = []
+#env = wrappers.Monitor(env, directory='tmp', force=True)
 
 obs = env.reset()
 dataset.append(resize(obs) / 255)
@@ -48,6 +50,8 @@ for i in trange(FLAGS.size - 1):
     if done:
         obs = env.reset()
     dataset.append(resize(obs) / 255)
+
+env.close()
 
 np.random.shuffle(dataset)
 print("Generated dataset.")

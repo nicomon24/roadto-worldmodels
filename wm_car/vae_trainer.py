@@ -151,12 +151,9 @@ for epoch in trange(FLAGS.start_epoch, sum(EPOCHS)):
     lr = LEARNING_RATES[lr_index]
     # Compute batch
     closses, rlosses, nlosses = [], [], []
-    for bindex in range(480, len(dataset), FLAGS.batch_size):
+    for bindex in range(0, len(dataset), FLAGS.batch_size):
         batch = dataset[bindex:bindex+FLAGS.batch_size]
-        for b in batch:
-            print(b.shape)
-        print(len(batch), batch[0].shape, bindex)
-        _rloss, _nloss, _closs, _ = sess.run([reconstruction_loss, reg_loss, complete_loss, optimizer], feed_dict = {X: batch, keep_prob:0.0, learning_rate:0.0, batch_size:len(batch)})
+        _rloss, _nloss, _closs, _ = sess.run([reconstruction_loss, reg_loss, complete_loss, optimizer], feed_dict = {X: batch, keep_prob:FLAGS.dropout, learning_rate:lr, batch_size:len(batch)})
         closses.append(_closs)
         rlosses.append(_rloss)
         nlosses.append(_nloss)
