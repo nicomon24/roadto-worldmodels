@@ -11,11 +11,10 @@ env.seed(42)
 obs = env.reset()
 done = False
 
-for i in trange(20):
+for i in trange(200):
     action = env.action_space.sample()
     obs, reward, done, info = env.step(action)
     dataset.append(obs)
-    env.render()
 env.close()
 
 plt.imshow(dataset[-1])

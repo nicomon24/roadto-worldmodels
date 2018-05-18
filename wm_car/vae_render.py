@@ -3,7 +3,7 @@
     its VAE reconstruction over time.
 '''
 
-import gym, sneks, time, argparse
+import gym, sneks, time, argparse, cv2
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import tensorflow as tf
@@ -32,13 +32,15 @@ batch_size = tf.placeholder(dtype=tf.int32, shape=(), name='batch_size')
 
 # ENCODER GRAPH
 with tf.variable_scope("encoder", reuse=None):
-    conv1 = tf.layers.conv2d(X, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv1 = tf.layers.conv2d(X, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop1 = tf.nn.dropout(conv1, keep_prob)
-    conv2 = tf.layers.conv2d(drop1, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv2 = tf.layers.conv2d(drop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop2 = tf.nn.dropout(conv2, keep_prob)
-    conv3 = tf.layers.conv2d(drop2, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv3 = tf.layers.conv2d(drop2, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop3 = tf.nn.dropout(conv3, keep_prob)
-    flat = tf.layers.flatten(drop3)
+    conv4 = tf.layers.conv2d(drop3, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    drop4 = tf.nn.dropout(conv4, keep_prob)
+    flat = tf.layers.flatten(drop4)
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_std = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_noise = tf.random_normal(shape=(batch_size, FLAGS.latent_size))
@@ -47,14 +49,17 @@ with tf.variable_scope("encoder", reuse=None):
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
     deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop3.shape[1], drop3.shape[2], drop3.shape[3]))
+    deflat4d = tf.reshape(deflat, shape=(-1, drop4.shape[1], drop4.shape[2], drop4.shape[3]))
     deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop2 = tf.nn.dropout(deconv2, keep_prob)
-    deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop3 = tf.nn.dropout(deconv3, keep_prob)
-    rebuild = tf.reshape(dedrop3, shape=(-1, 80, 80, 3))
+    deconv4 = tf.layers.conv2d_transpose(dedrop3, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    dedrop4 = tf.nn.dropout(deconv4, keep_prob)
+    rebuild = tf.reshape(dedrop4, shape=(-1, 80, 80, 3))
+
 # Losses
 reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
 tf_mrl = tf.placeholder(tf.float32, ())
@@ -80,14 +85,21 @@ if FLAGS.checkpoint:
     _saver = tf.train.Saver(tf.global_variables())
     _saver.restore(sess, FLAGS.checkpoint)
 else:
-    raise(Exception('No checkpoint provided.'))
+    pass
+    #raise(Exception('No checkpoint provided.'))
 
 # Env init
-env = gym.make('snek-rgb-zoom5-v1')
+env = gym.make('CarRacing-v0')
 env.seed(42)
+
+def resize(img):
+    img = img[:84,:,:]
+    img = cv2.resize(img, dsize=(80, 80))
+    return img
 
 def add_reco(obs):
     # Compute reconstruction
+    obs = resize(obs)
     reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
     return np.concatenate([obs/255, np.ones((80, 4, 3)), reco], axis=1)
 
@@ -102,11 +114,12 @@ def updatefig(*args):
     if not done:
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
+        env.render(mode='human')
     else:
         done = False
         obs = env.reset()
     im.set_array(add_reco(obs))
-    time.sleep(0.1)
+    time.sleep(0.01)
     return im,
 
 ani = animation.FuncAnimation(fig1, updatefig, interval=50, blit=True)
