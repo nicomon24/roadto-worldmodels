@@ -32,35 +32,41 @@ batch_size = tf.placeholder(dtype=tf.int32, shape=(), name='batch_size')
 
 # ENCODER GRAPH
 with tf.variable_scope("encoder", reuse=None):
-    conv1 = tf.layers.conv2d(X, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv1 = tf.layers.conv2d(X, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop1 = tf.nn.dropout(conv1, keep_prob)
-    conv2 = tf.layers.conv2d(drop1, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv2 = tf.layers.conv2d(drop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop2 = tf.nn.dropout(conv2, keep_prob)
-    conv3 = tf.layers.conv2d(drop2, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv3 = tf.layers.conv2d(drop2, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop3 = tf.nn.dropout(conv3, keep_prob)
-    flat = tf.layers.flatten(drop3)
+    conv4 = tf.layers.conv2d(drop3, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    drop4 = tf.nn.dropout(conv4, keep_prob)
+    flat = tf.layers.flatten(drop4)
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
-    latent_std = tf.layers.dense(flat, units=FLAGS.latent_size)
+    latent_log_sigma2 = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_noise = tf.random_normal(shape=(batch_size, FLAGS.latent_size))
-    latent_vector = latent_means + tf.multiply(latent_std, latent_noise)
+    latent_vector = latent_means + tf.multiply(tf.exp(latent_log_sigma2 / 2), latent_noise) # /2 because latent_log_sigma represent log(sigma^2)
 
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
     deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop3.shape[1], drop3.shape[2], drop3.shape[3]))
+    deflat4d = tf.reshape(deflat, shape=(-1, drop4.shape[1], drop4.shape[2], drop4.shape[3]))
     deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop2 = tf.nn.dropout(deconv2, keep_prob)
-    deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop3 = tf.nn.dropout(deconv3, keep_prob)
-    rebuild = tf.reshape(dedrop3, shape=(-1, 80, 80, 3))
+    deconv4 = tf.layers.conv2d_transpose(dedrop3, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    dedrop4 = tf.nn.dropout(deconv4, keep_prob)
+    rebuild = tf.reshape(dedrop4, shape=(-1, 80, 80, 3))
+
 # Losses
 reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
 tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
-reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
+#reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
+reg_loss = 0.5 * tf.reduce_sum(tf.exp(latent_log_sigma2) + tf.square(latent_means) - 1 + latent_log_sigma2)
 tf_mnl = tf.placeholder(tf.float32, ())
 tf_mnl_summary = tf.summary.scalar('mean_normalization_loss', tf_mnl)
 
