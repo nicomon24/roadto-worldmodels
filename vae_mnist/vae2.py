@@ -93,7 +93,7 @@ tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
 #reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
-reg_loss = 0.5 * tf.reduce_sum(tf.exp(latent_log_sigma) + tf.square(latent_means) - 1 + latent_log_sigma)
+reg_loss = 0.5 * tf.reduce_sum(tf.exp(latent_log_sigma) + tf.square(latent_means) - 1 - latent_log_sigma)
 tf_mnl = tf.placeholder(tf.float32, ())
 tf_mnl_summary = tf.summary.scalar('mean_normalization_loss', tf_mnl)
 
