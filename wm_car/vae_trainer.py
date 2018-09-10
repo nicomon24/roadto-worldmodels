@@ -94,7 +94,7 @@ with tf.variable_scope("encoder", reuse=None):
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_log_sigma = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_noise = tf.random_normal(shape=(batch_size, FLAGS.latent_size))
-    latent_vector = latent_means + tf.multiply(tf.exp(latent_log_std / 2), latent_noise) # /2 because latent_log_sigma represent log(sigma^2)
+    latent_vector = latent_means + tf.multiply(tf.exp(latent_log_sigma * 0.5), latent_noise) # /2 because latent_log_sigma represent log(sigma^2)
 
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
@@ -116,7 +116,7 @@ tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
 #reg_loss = tf.reduce_sum(-tf.log(tf.abs(latent_std)) + 0.5 * (tf.square(latent_std) + tf.square(latent_means) - 1))
-reg_loss = 0.5 * tf.reduce_sum(tf.exp(latent_log_sigma) + tf.square(latent_means) - 1 + latent_log_sigma)
+reg_loss = 0.5 * tf.reduce_sum(tf.exp(latent_log_sigma) + tf.square(latent_means) - 1 - latent_log_sigma)
 tf_mnl = tf.placeholder(tf.float32, ())
 tf_mnl_summary = tf.summary.scalar('mean_normalization_loss', tf_mnl)
 

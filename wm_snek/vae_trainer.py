@@ -22,15 +22,15 @@ parser.add_argument('--batch_size', type=int, default=32,
   help="""\
   Size of the image batches.
 """)
-parser.add_argument('--latent_size', type=int, default=64,
+parser.add_argument('--latent_size', type=int, default=1024,
   help="""\
   Size of the latent vector.
 """)
-parser.add_argument('--save_interval', type=int, default=10,
+parser.add_argument('--save_interval', type=int, default=100,
   help="""\
   Size of the latent vector.
 """)
-parser.add_argument('--dropout', type=float, default=0.9,
+parser.add_argument('--dropout', type=float, default=1.0,
   help="""\
   Dropout used during training.
 """)
@@ -38,7 +38,7 @@ parser.add_argument('--epochs', type=str, default='1000',
   help="""\
   Comma separated epochs.
 """)
-parser.add_argument('--learning_rates', type=str, default='1e-05',
+parser.add_argument('--learning_rates', type=str, default='1e-03',
   help="""\
   Comma separated learning rates. (Must be of the same size of epochs)
 """)
@@ -116,15 +116,17 @@ batch_size = tf.placeholder(dtype=tf.int32, shape=(), name='batch_size')
 
 # ENCODER GRAPH
 with tf.variable_scope("encoder", reuse=None):
-    conv1 = tf.layers.conv2d(X, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    conv1 = tf.layers.conv2d(X, filters=32, kernel_size=5, strides=5, padding='same', activation=tf.nn.relu)
     drop1 = tf.nn.dropout(conv1, keep_prob)
+    '''
     conv2 = tf.layers.conv2d(drop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop2 = tf.nn.dropout(conv2, keep_prob)
     conv3 = tf.layers.conv2d(drop2, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop3 = tf.nn.dropout(conv3, keep_prob)
     conv4 = tf.layers.conv2d(drop3, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop4 = tf.nn.dropout(conv4, keep_prob)
-    flat = tf.layers.flatten(drop4)
+    '''
+    flat = tf.layers.flatten(drop1)
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_log_sigma2 = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_noise = tf.random_normal(shape=(batch_size, FLAGS.latent_size))
@@ -132,20 +134,22 @@ with tf.variable_scope("encoder", reuse=None):
 
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
-    deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop4.shape[1], drop4.shape[2], drop4.shape[3]))
+    deflat = tf.layers.dense(flat, units=flat.shape[1])
+    deflat4d = tf.reshape(deflat, shape=(-1, drop1.shape[1], drop1.shape[2], drop1.shape[3]))
+    '''
     deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop2 = tf.nn.dropout(deconv2, keep_prob)
     deconv3 = tf.layers.conv2d_transpose(dedrop2, filters=32, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop3 = tf.nn.dropout(deconv3, keep_prob)
-    deconv4 = tf.layers.conv2d_transpose(dedrop3, filters=3, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
+    '''
+    deconv4 = tf.layers.conv2d_transpose(deflat4d, filters=3, kernel_size=5, strides=5, padding='same', activation=tf.nn.relu)
     dedrop4 = tf.nn.dropout(deconv4, keep_prob)
     rebuild = tf.reshape(dedrop4, shape=(-1, 80, 80, 3))
 
 # Losses
-reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
+reconstruction_loss = tf.sqrt(tf.reduce_sum(tf.squared_difference(rebuild, X)))
 tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
@@ -216,14 +220,30 @@ for epoch in trange(FLAGS.start_epoch, sum(EPOCHS)):
             })
         val_writer.add_summary(summary, epoch)
     # Check if we need to save
+    '''
     if epoch % FLAGS.save_interval == 0:
         checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '-' + str(epoch) + '.ckpt')
         tf.logging.info('Saving to "%s-%d"', checkpoint_path, epoch)
         saver.save(sess, checkpoint_path, write_meta_graph=True)
+    '''
 
 # Save the last model
+'''
 checkpoint_path = os.path.join(FLAGS.save_dir, FLAGS.alias + '-' + str(sum(EPOCHS)) + '.ckpt')
 tf.logging.info('Saving to "%s-%d"', checkpoint_path, epoch)
 saver.save(sess, checkpoint_path, write_meta_graph=True)
+'''
 
 print("Bye bye")
+
+import matplotlib.pyplot as plt
+############## TEMP
+def add_reco(obs):
+    # Compute reconstruction
+    reco, loss = sess.run([rebuild, reconstruction_loss], feed_dict={X: [obs], keep_prob:1.0, batch_size:1})
+    print("RECO LOSS", loss)
+    return np.concatenate([obs, np.ones((80, 4, 3)), reco[0]], axis=1)
+
+for img in dataset:
+    plt.imshow(add_reco(img))
+    plt.show()

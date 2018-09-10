@@ -41,6 +41,7 @@ with tf.variable_scope("encoder", reuse=None):
     conv4 = tf.layers.conv2d(drop3, filters=256, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     drop4 = tf.nn.dropout(conv4, keep_prob)
     flat = tf.layers.flatten(drop4)
+    flat2 = tf.layers.dense(flat, units=512)
     latent_means = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_log_sigma2 = tf.layers.dense(flat, units=FLAGS.latent_size)
     latent_noise = tf.random_normal(shape=(batch_size, FLAGS.latent_size))
@@ -48,8 +49,9 @@ with tf.variable_scope("encoder", reuse=None):
 
 # DECODER GRAPH
 with tf.variable_scope("decoder", reuse=None):
-    deflat = tf.layers.dense(latent_vector, units=flat.shape[1])
-    deflat4d = tf.reshape(deflat, shape=(-1, drop4.shape[1], drop4.shape[2], drop4.shape[3]))
+    deflat = tf.layers.dense(latent_vector, units=flat2.shape[1])
+    deflat2 = tf.layers.dense(deflat, units=flat.shape[1])
+    deflat4d = tf.reshape(deflat2, shape=(-1, drop4.shape[1], drop4.shape[2], drop4.shape[3]))
     deconv1 = tf.layers.conv2d_transpose(deflat4d, filters=128, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
     dedrop1 = tf.nn.dropout(deconv1, keep_prob)
     deconv2 = tf.layers.conv2d_transpose(dedrop1, filters=64, kernel_size=4, strides=2, padding='same', activation=tf.nn.relu)
@@ -61,7 +63,7 @@ with tf.variable_scope("decoder", reuse=None):
     rebuild = tf.reshape(dedrop4, shape=(-1, 80, 80, 3))
 
 # Losses
-reconstruction_loss = tf.reduce_sum(tf.squared_difference(rebuild, X))
+reconstruction_loss = tf.sqrt(tf.reduce_sum(tf.squared_difference(rebuild, X)))
 tf_mrl = tf.placeholder(tf.float32, ())
 tf_mrl_summary = tf.summary.scalar('mean_reconstruction_loss', tf_mrl)
 
@@ -94,8 +96,9 @@ env.seed(42)
 
 def add_reco(obs):
     # Compute reconstruction
-    reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
-    return np.concatenate([obs/255, np.ones((80, 4, 3)), reco], axis=1)
+    reco, loss = sess.run([rebuild, reconstruction_loss], feed_dict={X: [obs], keep_prob:1.0, batch_size:1})
+    print(loss)
+    return np.concatenate([obs/255, np.ones((80, 4, 3)), reco[0]], axis=1)
 
 obs = env.reset()
 
