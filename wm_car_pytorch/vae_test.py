@@ -10,11 +10,29 @@
 import gym, argparse, pickle, time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import tensorflow as tf
 import numpy as np
+import torch
 
-from vae import create_vae
+from vae import VAE
 from wrappers import CropCarRacing, ResizeObservation, Scolorized, NormalizeRGB
+
+def NCHW(x):
+    x = np.array(x)
+    if len(x.shape) == 4:
+        return np.transpose(x, (0, 3, 1, 2))
+    elif len(x.shape) == 3:
+        return np.transpose(x, (2, 0, 1))
+    else:
+        raise Exception("Unrecognized shape.")
+
+def NHWC(x):
+    x = np.array(x)
+    if len(x.shape) == 4:
+        return np.transpose(x, (0, 2, 3, 1))
+    elif len(x.shape) == 3:
+        return np.transpose(x, (1, 2, 0))
+    else:
+        raise Exception("Unrecognized shape.")
 
 def imshow_bw_or_rgb(img):
     if img.shape[-1] == 1:
@@ -41,7 +59,11 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='', help="""Dataset file to load.""")
     parser.add_argument('--arch', type=str, default='base_car_racing', help="""Model architecture.""")
     parser.add_argument('--seed', type=int, default=42, help="""Seed used in the environment initialization.""")
+    parser.add_argument('--no-cuda', action='store_true', default=False, help='Enables CUDA training')
     args, unparsed = parser.parse_known_args()
+    # Check cuda
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if args.cuda else "cpu")
     # Loading the dataset
     if args.dataset:
         dataset = np.array(pickle.load(open(args.dataset, 'rb')))
@@ -49,6 +71,7 @@ if __name__ == '__main__':
         print("Dataset size:", N_SAMPLES)
         print("Channels:", CHANNELS)
         print("Image dim: (%d,%d)" % (W,H))
+        dataset_torch = torch.from_numpy(NCHW(dataset)).float().to(device)
     else:
         print("Using gym environment directly.")
         env = gym.make('CarRacing-v0')
@@ -56,32 +79,30 @@ if __name__ == '__main__':
         env = ResizeObservation(env, (64, 64, 3))
         env = NormalizeRGB(env)
         # env = Scolorized(env)
-        W, H, CHANNELS = env.observation_space.shape
         env.seed(args.seed)
 
     # Network creation
-    tf.reset_default_graph()
-    X, z, rebuild, batch_size, keep_prob = create_vae((W,H,CHANNELS), arch=args.arch, latent_size=args.latent_size, is_training=False)
-    # Session and init
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    vae = VAE(arch=args.arch, latent_size=args.latent_size)
     # Restore checkpoint
     assert args.checkpoint, "No checkpoint provided."
-    _saver = tf.train.Saver(tf.global_variables())
-    _saver.restore(sess, args.checkpoint)
+    vae.load_state_dict(torch.load(args.checkpoint))
+    vae.eval()
 
     if args.dataset:
         # Single observation display
-        obs = dataset[args.sample]
-        reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
-        imshow_bw_or_rgb(side_by_side(obs, reco))
+        mu, log_sigma, z, rebuild = vae(dataset_torch[args.sample:args.sample+1])
+        rebuild = rebuild.detach().numpy()[0]
+        imshow_bw_or_rgb(side_by_side(dataset[args.sample], NHWC(rebuild)))
         plt.show()
     else:
         # Animation of environment
         obs = env.reset()
-        reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
+        obs_torch = torch.from_numpy(NCHW([obs])).float().to(device)
+        mu, log_sigma, z, rebuild = vae(obs_torch)
+        rebuild = NHWC(rebuild.detach().numpy()[0])
+
         fig1 = plt.figure()
-        im = plt.imshow(side_by_side(obs, reco))
+        im = plt.imshow(side_by_side(obs, rebuild))
         done = False
 
         # Setting animation update function
@@ -94,8 +115,10 @@ if __name__ == '__main__':
             else:
                 done = False
                 obs = env.reset()
-            reco = sess.run(rebuild, feed_dict={X: [obs], keep_prob:1.0, batch_size:1})[0]
-            im.set_array(side_by_side(obs, reco))
+            obs_torch = torch.from_numpy(NCHW([obs])).float().to(device)
+            mu, log_sigma, z, rebuild = vae(obs_torch)
+            rebuild = NHWC(rebuild.detach().numpy()[0])
+            im.set_array(side_by_side(obs, rebuild))
             time.sleep(0.01)
             return im,
 

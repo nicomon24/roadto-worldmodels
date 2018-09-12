@@ -59,7 +59,7 @@ def create_vae(input_shape, arch='base_car_racing', latent_size=32, beta=1.0, is
         return X, z, rebuild, batch_size, keep_prob
 
     # Reconstruction loss
-    reconstruction_loss  = tf.losses.mean_squared_error(X, rebuild)
+    reconstruction_loss = tf.losses.mean_squared_error(X, rebuild)
     # Regularization loss
     reg_loss = -tf.reduce_mean(0.5 * (1 + z_log_sigma_sq - z_mu**2 - tf.exp(z_log_sigma_sq)))
     # Complete loss
