@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rates', type=str, default='1e-05', help="""Comma separated learning rates. (Must be of the same size of epochs)""")
     parser.add_argument('--save_dir', type=str, default='checkpoints', help="""Directory in which checkpoints are saved.""")
     parser.add_argument('--log_dir', type=str, default='logs', help="""Directory in which logs for tensorboard are saved.""")
-    parser.add_argument('--checkpoint', type=str, default='', help="""Path of a checkpoint to restore.""")
+    parser.add_argument('--vae', type=str, default=None, help="""VAE checkpoint to restore.""")
     parser.add_argument('--start_epoch', type=int, default=0, help="""Start epoch when loading a checkpoint.""")
     parser.add_argument('--alias', type=str, default='base', help="""Alias of the model.""")
     parser.add_argument('--arch', type=str, default='base_car_racing', help="""Model architecture.""")
@@ -53,11 +53,14 @@ if __name__ == '__main__':
 
     # Create the VAE and the optimizer
     vae = VAE(arch=args.arch, latent_size=args.latent_size, beta=args.beta, dropout_proba=args.dropout).to(device)
-    writer = SummaryWriter('logs/' + args.alias)
-    if not os.path.exists('checkpoints'):
-        os.makedirs('checkpoints')
-    # TODO: checkpoint loading
-
+    if args.vae:
+        # Load a previous VAE model
+        vae.load_state_dict(torch.load(args.vae))
+        vae.eval()
+    # Summary writer and dir for checkpoints
+    writer = SummaryWriter('vae_logs/' + args.alias)
+    if not os.path.exists('vae_weights'):
+        os.makedirs('vae_weights')
     # Training
     print("Start training...")
     vae.train()
@@ -70,7 +73,7 @@ if __name__ == '__main__':
         lr = LEARNING_RATES[lr_index]
         optimizer = optim.Adam(vae.parameters(), lr=lr)
         reco_losses, norm_losses, total_losses = [], [], []
-        for bindex in range(0, len(dataset), args.batch_size):
+        for bindex in trange(0, len(dataset), args.batch_size):
             batch = dataset[bindex:bindex+args.batch_size]
             _reco, _norm, _total = vae.optimize(batch, optimizer)
             reco_losses.append(_reco.item())
@@ -83,11 +86,11 @@ if __name__ == '__main__':
         writer.add_scalar('data/learning_rate', lr, epoch)
         # Check if we need to save
         if (epoch > 0) and (epoch % args.save_interval == 0):
-            filepath = 'checkpoints/' + args.alias + '-' + str(epoch) + '.torch'
+            filepath = 'vae_weights/' + args.alias + '-' + str(epoch) + '.torch'
             torch.save(vae.state_dict(), filepath)
 
     # End training
     writer.close()
     # Save last checkpoint
-    filepath = 'checkpoints/' + args.alias + '-' + str(epoch) + '[final].torch'
+    filepath = 'vae_weights/' + args.alias + '-' + str(epoch) + '[final].torch'
     torch.save(vae.state_dict(), filepath)

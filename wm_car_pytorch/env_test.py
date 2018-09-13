@@ -4,7 +4,7 @@ import gym
 import matplotlib.pyplot as plt
 from tqdm import trange
 
-from wrappers import ResizeObservation, CropCarRacing, Scolorized, NormalizeRGB
+from wrappers import ResizeObservation, CropCarRacing, Scolorized, NormalizeRGB, VAEObservation
 
 '''
     Car Racing action space:
@@ -19,6 +19,7 @@ env = CropCarRacing(env)
 env = ResizeObservation(env, (64, 64, 3))
 #env = Scolorized(env)
 env = NormalizeRGB(env)
+#env = VAEObservation(env, 'vae_weights/base-2000.torch')
 
 dataset = []
 env.seed(42)
@@ -27,13 +28,13 @@ done = False
 
 print(env.observation_space)
 print(env.action_space)
+print(obs.shape)
 
 for i in trange(50):
     action = env.action_space.sample()
     obs, reward, done, info = env.step(action)
-    env.render()
     dataset.append(obs)
 env.close()
 
-plt.imshow(dataset[-1])
+plt.imshow(obs)
 plt.show()

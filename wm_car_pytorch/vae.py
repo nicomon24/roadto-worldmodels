@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical, MultivariateNormal
 
 class VAE(nn.Module):
 
@@ -18,15 +17,15 @@ class VAE(nn.Module):
         self.latent_size = latent_size
         self.dropout_proba = dropout_proba
         # Convolutional layers
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 32, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.conv2 = nn.Sequential(nn.Conv2d(32, 64, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.conv3 = nn.Sequential(nn.Conv2d(64, 128, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.conv4 = nn.Sequential(nn.Conv2d(128, 256, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.conv1 = nn.Sequential(nn.BatchNorm2d(3), nn.Conv2d(3, 32, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.conv2 = nn.Sequential(nn.BatchNorm2d(32), nn.Conv2d(32, 64, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.conv3 = nn.Sequential(nn.BatchNorm2d(64), nn.Conv2d(64, 128, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.conv4 = nn.Sequential(nn.BatchNorm2d(128), nn.Conv2d(128, 256, 4, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
         # Deconvolutional layers
-        self.deconv1 = nn.Sequential(nn.ConvTranspose2d(1024, 128, 5, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.deconv2 = nn.Sequential(nn.ConvTranspose2d(128, 64, 5, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.deconv3 = nn.Sequential(nn.ConvTranspose2d(64, 32, 6, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
-        self.deconv4 = nn.Sequential(nn.ConvTranspose2d(32, 3, 6, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.deconv1 = nn.Sequential(nn.BatchNorm2d(1024), nn.ConvTranspose2d(1024, 128, 5, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.deconv2 = nn.Sequential(nn.BatchNorm2d(128), nn.ConvTranspose2d(128, 64, 5, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.deconv3 = nn.Sequential(nn.BatchNorm2d(64), nn.ConvTranspose2d(64, 32, 6, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
+        self.deconv4 = nn.Sequential(nn.BatchNorm2d(32), nn.ConvTranspose2d(32, 3, 6, stride=2), nn.ReLU(), nn.Dropout(self.dropout_proba))
         # Linear layers
         self.fc11 = nn.Linear(1024, latent_size)
         self.fc12 = nn.Linear(1024, latent_size)
