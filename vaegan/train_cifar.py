@@ -25,6 +25,7 @@ parser.add_argument('--batch_size', type=int, default=16, help='Batch size.')
 parser.add_argument('--latent_size', type=int, default=32, help='Latent vector size.')
 parser.add_argument('--epochs', type=int, default=10, help='Training epochs.')
 parser.add_argument('--lr', type=float, default=0.001, help='Learning rate. (default: 0.001)')
+parser.add_argument('--seed', type=int, default=42, help='Random seed.')
 parser.add_argument('--logdir', type=str, default='logs', help='Logging directory.')
 parser.add_argument('--name', type=str, default='base', help='Name for the run.')
 parser.add_argument('--savedir', type=str, default='weights', help='Directory to use for saving the model.')
@@ -32,6 +33,10 @@ args = parser.parse_args()
 
 # Find the available device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# Set the random seed
+torch.manual_seed(args.seed)
+if torch.cuda.is_available:
+    torch.cuda.manual_seed(args.seed)
 
 transform = transforms.Compose([
     # Space for other transformations
