@@ -48,8 +48,10 @@ class EncoderModule(nn.Module):
         # Pass the convolutional layers
         for conv_layer in self.encoder_layers:
             x = conv_layer(x)
+            print(x)
         # Reshape to 2D for linear layers
         x = x.view(x.shape[0], -1)
+        print(x)
         return self.encoder_mean_layer(x), self.encoder_sigma_layer(x)
 
 class DecoderModule(nn.Module):
@@ -127,7 +129,7 @@ class VAEGAN(nn.Module):
 
         # Initialization
         for m in self.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
                 #nn.init.xavier_normal_(m.weight, gain=1)
                 nn.init.normal_(m.weight, mean=0, std=0.1)
 
@@ -154,6 +156,8 @@ class VAEGAN(nn.Module):
     def forward(self, x):
         # Encode-decode the samples
         mu, log_sigma = self.encode(x)
+        if torch.isnan(mu):
+            exit(0)
         z = self.reparameterize(mu, log_sigma)
         rebuild = self.decode(z)
         assert x.shape == rebuild.shape, 'Image dimension not aligned.'
