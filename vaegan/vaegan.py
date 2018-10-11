@@ -102,6 +102,8 @@ class DiscriminatorModule(nn.Module):
         # Create module list
         self.discriminator_layers = nn.ModuleList(self.discriminator_layers)
         self.discriminator_proba = nn.Sequential(nn.Linear(flattened_final_shape, 1), nn.Sigmoid())
+        # Proba init set to small
+        nn.init.xavier_normal_(self.discriminator_proba[0].weight, gain=1e-3)
 
     def forward(self, x):
         # Pass the convolutional layers
@@ -127,7 +129,7 @@ class VAEGAN(nn.Module):
 
         # Initialization
         for m in self.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
                 #nn.init.xavier_normal_(m.weight, gain=1)
                 nn.init.normal_(m.weight, mean=0, std=0.1)
 
