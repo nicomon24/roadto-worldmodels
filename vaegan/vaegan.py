@@ -183,7 +183,8 @@ class VAEGAN(nn.Module):
         mse = mse.view(mse.size(0), -1)
         dislike_loss = torch.mean(-0.5 * torch.sum(mse, dim=1))
 
-        print("DIS_TRUE", dis_true, dis_rebuild, dis_noise)
+        print("DIS_MAX", torch.max(dis_true), torch.max(dis_rebuild), torch.max(dis_noise))
+        print("DIS_MIN", torch.min(dis_true), torch.min(dis_rebuild), torch.min(dis_noise))
         # GAN loss
         gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
 
