@@ -2,7 +2,6 @@
     Train a VAEGAN model on the MNIST dataset.
 '''
 
-import matplotlib.pyplot as plt
 from tqdm import trange, tqdm
 import numpy as np
 import argparse
