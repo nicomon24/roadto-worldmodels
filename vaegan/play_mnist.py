@@ -43,7 +43,7 @@ if args.mode == 'generator':
     # Decode using the VAE decoder
     generated = vaegan.decode(torch.from_numpy(np.reshape(x, (-1, state['latent_size']))))
     # Reshape to display [has shape (batch, 1, 28, 28)]
-    generated = torch.permute(0, 2, 3, 1) # shape: (batch, 28, 28, 1)
+    generated = generated.permute(0, 2, 3, 1) # shape: (batch, 28, 28, 1)
     generated = np.reshape(generated.detach().numpy(), (args.N, args.N, 28, 28))
     # Create a window with NxN subplots
     fig, ax = plt.subplots(args.N, args.N)

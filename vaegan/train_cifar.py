@@ -55,8 +55,6 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size, sh
 CONVS = [(32, 4, 2), (64, 4, 1), (128, 4, 1), (256, 4, 1)]
 input_shape = trainset[0][0].detach().numpy().shape
 vaegan = VAEGAN(input_shape, latent_size=args.latent_size, convs=CONVS).to(device)
-# Optimizer
-optimizer = optim.Adam(vaegan.parameters(), lr=args.lr)
 
 # Tensorboard writer
 writer = SummaryWriter(args.logdir + '/' + args.name)
@@ -68,12 +66,12 @@ for epoch in trange(args.epochs):  # loop over the dataset multiple times
         # Get the inputs
         inputs, labels = data
         # Optimize and compute losses
-        reco_loss, norm_loss, total_loss = vaegan.optimize(inputs.to(device), optimizer)
+        prior_loss, dislike_loss, gan_loss = vaegan.optimize(inputs.to(device), args.lr, gamma=1.0)
         # Log
         global_i += 1
-        writer.add_scalar('data/reco_loss', reco_loss, global_i)
-        writer.add_scalar('data/norm_loss', norm_loss, global_i)
-        writer.add_scalar('data/total_loss', total_loss, global_i)
+        writer.add_scalar('data/prior_loss', prior_loss, global_i)
+        writer.add_scalar('data/dislike_loss', dislike_loss, global_i)
+        writer.add_scalar('data/gan_loss', gan_loss, global_i)
 
 # Save the model for inference
 state = {

@@ -43,7 +43,7 @@ if args.mode == 'generator':
     # Decode using the VAE decoder
     generated = vaegan.decode(torch.from_numpy(np.reshape(x, (-1, state['latent_size']))))
     # Reshape to display [has shape (batch, 3, 32, 32)]
-    generated = torch.permute(0, 2, 3, 1) # shape: (batch, 32, 32, 3)
+    generated = generated.permute(0, 2, 3, 1) # shape: (batch, 32, 32, 3)
     generated = np.reshape(generated.detach().numpy(), (args.N, args.N, 32, 32, 3))
     # Create a window with NxN subplots
     fig, ax = plt.subplots(args.N, args.N)
@@ -54,7 +54,7 @@ if args.mode == 'generator':
 elif args.mode == 'reconstructor':
     # Get N images from MNIST
     transform = transforms.Compose([transforms.ToTensor()])
-    testset = torchvision.datasets.MNIST(root='./mnist_data', train=False, download=True, transform=transform)
+    testset = torchvision.datasets.CIFAR10(root='./mnist_data', train=False, download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.N, shuffle=False, num_workers=2)
     dataiter = iter(testloader)
     images, labels = dataiter.next()
