@@ -17,7 +17,7 @@ print(torchvision.__version__)
 
 from tensorboardX import SummaryWriter
 
-from vaegan import VAEGAN
+from vaegan_cifar import VAEGAN
 
 # Parse arguments
 parser = argparse.ArgumentParser(description='VAEGAN learning MNIST')
@@ -39,8 +39,8 @@ transform = transforms.Compose([
 ])
 
 # Datasets
-trainset = torchvision.datasets.MNIST(root='./mnist_data', train=True, download=True, transform=transform)
-testset = torchvision.datasets.MNIST(root='./mnist_data', train=False, download=True, transform=transform)
+trainset = torchvision.datasets.CIFAR10(root='./cifar_data', train=True, download=True, transform=transform)
+testset = torchvision.datasets.CIFAR10(root='./cifar_data', train=False, download=True, transform=transform)
 
 # Loaders
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=2)
@@ -51,7 +51,7 @@ CONVS = [(32, 4, 2), (64, 4, 1), (128, 4, 1), (256, 4, 1)]
 vaegan = VAEGAN(trainset[0][0].shape, latent_size=args.latent_size, convs=CONVS).to(device)
 # Optimizer
 optimizer = optim.Adam(vaegan.parameters(), lr=args.lr)
-
+'''
 # Tensorboard writer
 writer = SummaryWriter(args.logdir + '/' + args.name)
 
@@ -79,3 +79,4 @@ if not os.path.exists(args.savedir):
     os.makedirs(args.savedir)
 torch.save(state, args.savedir + '/' + args.name + '.torch')
 print("Saved final model, closing...")
+'''
