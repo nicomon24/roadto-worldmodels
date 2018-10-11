@@ -50,7 +50,6 @@ class EncoderModule(nn.Module):
             x = conv_layer(x)
         # Reshape to 2D for linear layers
         x = x.view(x.shape[0], -1)
-        print(x)
         return self.encoder_mean_layer(x), self.encoder_sigma_layer(x)
 
 class DecoderModule(nn.Module):
@@ -203,6 +202,7 @@ class VAEGAN(nn.Module):
         # Backward
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
+        discriminator_optimizer.zero_grad()
 
         encoder_loss.backward(retain_graph=True)
         encoder_optimizer.step()
@@ -210,9 +210,8 @@ class VAEGAN(nn.Module):
         decoder_loss.backward(retain_graph=True)
         decoder_optimizer.step()
 
-        #discriminator_optimizer.zero_grad()
-        #discriminator_loss.backward()
-        #discriminator_optimizer.step()
+        discriminator_loss.backward()
+        discriminator_optimizer.step()
 
         return prior_loss, dislike_loss, gan_loss
 
