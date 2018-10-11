@@ -174,19 +174,12 @@ class VAEGAN(nn.Module):
 
         # Prior loss: KL-divergence
         prior_loss = torch.mean(-0.5 * torch.sum(1 + log_sigma - mu**2 - log_sigma.exp(), dim=1))
-        if torch.isnan(prior_loss):
-            print(self.encoder.encoder_mean_layer.weight)
-            print(log_sigma)
-            print(mu)
-            exit(0)
 
         # Dis-like loss
         mse = ((dis_l_true-dis_l_rebuild)**2)
         mse = mse.view(mse.size(0), -1)
         dislike_loss = torch.mean(-0.5 * torch.sum(mse, dim=1))
 
-        print("DIS_MAX", torch.max(dis_true), torch.max(dis_rebuild), torch.max(dis_noise))
-        print("DIS_MIN", torch.min(dis_true), torch.min(dis_rebuild), torch.min(dis_noise))
         # GAN loss
         gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
 
@@ -203,8 +196,6 @@ class VAEGAN(nn.Module):
         encoder_loss = prior_loss + dislike_loss
         decoder_loss = gamma * dislike_loss - gan_loss
         discriminator_loss = gan_loss
-        print("LOSS1", prior_loss, dislike_loss, gan_loss)
-        print("LOSS2", encoder_loss, decoder_loss, discriminator_loss)
 
         # Backward
         encoder_optimizer.zero_grad()
