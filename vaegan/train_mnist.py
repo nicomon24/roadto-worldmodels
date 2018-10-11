@@ -49,7 +49,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size, sh
 # Create VAEGAN
 vaegan = VAEGAN(latent_size=args.latent_size).to(device)
 # Optimizer
-optimizer = optim.SGD(vaegan.parameters(), lr=args.lr)
+optimizer = optim.Adam(vaegan.parameters(), lr=args.lr)
 
 # Tensorboard writer
 writer = SummaryWriter(args.logdir + '/' + args.name)

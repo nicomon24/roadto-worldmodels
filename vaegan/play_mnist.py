@@ -31,7 +31,7 @@ args = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Load the model
-state = torch.load(args.weights)
+state = torch.load(args.weights, map_location='cpu')
 vaegan = VAEGAN(latent_size=state['latent_size']).to(device)
 vaegan.load_state_dict(state['state_dict'])
 vaegan.eval()
