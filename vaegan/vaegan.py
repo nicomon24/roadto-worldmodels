@@ -156,7 +156,7 @@ class VAEGAN(nn.Module):
     def forward(self, x):
         # Encode-decode the samples
         mu, log_sigma = self.encode(x)
-        if torch.isnan(mu):
+        if torch.isnan(mu).any():
             exit(0)
         z = self.reparameterize(mu, log_sigma)
         rebuild = self.decode(z)
