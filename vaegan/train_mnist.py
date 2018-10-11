@@ -67,8 +67,6 @@ for epoch in trange(args.epochs):  # loop over the dataset multiple times
         writer.add_scalar('data/reco_loss', reco_loss, global_i)
         writer.add_scalar('data/norm_loss', norm_loss, global_i)
         writer.add_scalar('data/total_loss', total_loss, global_i)
-        if i == 50:
-            break
 
 # Save the model for inference
 state = {
