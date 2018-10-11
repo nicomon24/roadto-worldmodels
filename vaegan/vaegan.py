@@ -199,6 +199,8 @@ class VAEGAN(nn.Module):
         encoder_loss = prior_loss + dislike_loss
         decoder_loss = gamma * dislike_loss - gan_loss
         discriminator_loss = gan_loss
+        print(prior_loss, dislike_loss, gan_loss)
+        print(encoder_loss, decoder_loss, discriminator_loss)
 
         # Backward
         encoder_optimizer.zero_grad()
