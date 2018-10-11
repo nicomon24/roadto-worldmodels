@@ -48,7 +48,6 @@ class EncoderModule(nn.Module):
         # Pass the convolutional layers
         for conv_layer in self.encoder_layers:
             x = conv_layer(x)
-            print(x)
         # Reshape to 2D for linear layers
         x = x.view(x.shape[0], -1)
         print(x)
