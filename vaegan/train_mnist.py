@@ -4,7 +4,7 @@
 
 from tqdm import trange, tqdm
 import numpy as np
-import argparse
+import argparse, os
 
 import torch
 import torch.nn as nn
@@ -73,5 +73,8 @@ state = {
     'state_dict': vaegan.state_dict(),
     'latent_size': vaegan.latent_size
 }
+# Create savedir if necessary
+if not os.path.exists(args.savedir):
+    os.makedirs(args.savedir)
 torch.save(state, args.savedir + '/' + args.name + '.torch')
 print("Saved final model, closing...")
