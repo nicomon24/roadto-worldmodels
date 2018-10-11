@@ -17,7 +17,7 @@ print(torchvision.__version__)
 
 from tensorboardX import SummaryWriter
 
-from vaegan_cifar import VAEGAN
+from vaegan import VAEGAN
 
 # Parse arguments
 parser = argparse.ArgumentParser(description='VAEGAN learning MNIST')

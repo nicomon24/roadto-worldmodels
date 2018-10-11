@@ -32,7 +32,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Load the model
 state = torch.load(args.weights, map_location='cpu')
-vaegan = VAEGAN(latent_size=state['latent_size']).to(device)
+input_shape = (1, 28, 28)
+vaegan = VAEGAN(input_shape, latent_size=state['latent_size'], convs=state['convs']).to(device)
 vaegan.load_state_dict(state['state_dict'])
 vaegan.eval()
 
@@ -41,7 +42,8 @@ if args.mode == 'generator':
     x = np.random.randn(args.N, args.N, state['latent_size']).astype(np.float32)
     # Decode using the VAE decoder
     generated = vaegan.decode(torch.from_numpy(np.reshape(x, (-1, state['latent_size']))))
-    # Reshape to display
+    # Reshape to display [has shape (batch, 1, 28, 28)]
+    generated = torch.permute(0, 2, 3, 1) # shape: (batch, 28, 28, 1)
     generated = np.reshape(generated.detach().numpy(), (args.N, args.N, 28, 28))
     # Create a window with NxN subplots
     fig, ax = plt.subplots(args.N, args.N)
@@ -59,8 +61,8 @@ elif args.mode == 'reconstructor':
     # Get the reconstructed images
     mu, log_sigma, z, rebuild = vaegan(images)
     # Transform for numpy
-    ground = np.reshape(images.detach().numpy(), (4, 28, 28))
-    rebuild = np.reshape(rebuild.detach().numpy(), (4, 28, 28))
+    ground = np.reshape(images.detach().numpy(), (args.N, 28, 28))
+    rebuild = np.reshape(rebuild.detach().numpy(), (args.N, 28, 28))
     # Plot
     fig, ax = plt.subplots(args.N, 2)
     for i in range(args.N):
