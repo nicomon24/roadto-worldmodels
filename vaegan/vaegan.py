@@ -131,6 +131,9 @@ class VAEGAN(nn.Module):
                 #nn.init.xavier_normal_(m.weight, gain=1)
                 nn.init.normal_(m.weight, mean=0, std=0.1)
 
+    def set_device(self, device):
+        self.default_device = device
+
     def encode(self, x):
         return self.encoder(x)
 
@@ -158,7 +161,7 @@ class VAEGAN(nn.Module):
         dis_true, dis_l_true = self.discriminate(x)
         dis_rebuild, dis_l_rebuild = self.discriminate(rebuild)
         # Generate noise and decode
-        noise = torch.randn(z.shape[0], z.shape[1])
+        noise = torch.randn(z.shape[0], z.shape[1]).to(self.default_device)
         rebuild_noise = self.decode(noise)
         dis_noise, dis_l_noise = self.discriminate(rebuild_noise)
         return mu, log_sigma, z, rebuild, dis_true, dis_l_true, dis_rebuild, dis_l_rebuild, dis_noise, dis_l_noise

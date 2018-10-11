@@ -55,6 +55,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size, sh
 CONVS = [(32, 4, 2), (64, 4, 1), (128, 4, 1), (256, 4, 1)]
 input_shape = trainset[0][0].detach().numpy().shape
 vaegan = VAEGAN(input_shape, latent_size=args.latent_size, convs=CONVS).to(device)
+vaegan.set_device(device)
 
 # Tensorboard writer
 writer = SummaryWriter(args.logdir + '/' + args.name)
