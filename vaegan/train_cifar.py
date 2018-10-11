@@ -67,13 +67,14 @@ for epoch in trange(args.epochs):  # loop over the dataset multiple times
         # Get the inputs
         inputs, labels = data
         # Optimize and compute losses
-        prior_loss, dislike_loss, gan_loss = vaegan.optimize(inputs.to(device), args.lr, gamma=1.0)
+        prior_loss, dislike_loss, gan_loss, reco_loss = vaegan.optimize(inputs.to(device), args.lr, gamma=1.0)
         # Log
         global_i += 1
         writer.add_scalar('data/prior_loss', prior_loss, global_i)
         writer.add_scalar('data/dislike_loss', dislike_loss, global_i)
         writer.add_scalar('data/gan_loss', gan_loss, global_i)
-
+        writer.add_scalar('data/reco_loss', reco_loss, global_i)
+        
 # Save the model for inference
 state = {
     'state_dict': vaegan.state_dict(),

@@ -183,7 +183,12 @@ class VAEGAN(nn.Module):
         # GAN loss
         gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
 
-        return prior_loss, dislike_loss, gan_loss
+        # Reco loss for comparison
+        mse_reco = ((x-rebuild)**2)
+        mse_reco = mse_reco.view(mse_reco.size(0), -1)
+        reco_loss = torch.mean(torch.sum(mse_reco, dim=1))
+
+        return prior_loss, dislike_loss, gan_loss, reco_loss
 
     def optimize(self, x, lr=1e-4, gamma=1.0):
         # Create the 3 optimizers
@@ -191,7 +196,7 @@ class VAEGAN(nn.Module):
         decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=lr)
         discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=lr)
         # Get losses
-        prior_loss, dislike_loss, gan_loss = self.losses(x)
+        prior_loss, dislike_loss, gan_loss, reco_loss = self.losses(x)
         # Module losses
         encoder_loss = prior_loss + dislike_loss
         decoder_loss = gamma * dislike_loss - gan_loss
@@ -211,7 +216,7 @@ class VAEGAN(nn.Module):
         discriminator_loss.backward()
         discriminator_optimizer.step()
 
-        return prior_loss, dislike_loss, gan_loss
+        return prior_loss, dislike_loss, gan_loss, reco_loss
 
 if __name__ == '__main__':
     # Perform tests

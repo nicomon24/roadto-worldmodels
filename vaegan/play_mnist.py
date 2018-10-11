@@ -34,6 +34,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 state = torch.load(args.weights, map_location='cpu')
 input_shape = (1, 28, 28)
 vaegan = VAEGAN(input_shape, latent_size=state['latent_size'], convs=state['convs']).to(device)
+vaegan.set_device(device)
 vaegan.load_state_dict(state['state_dict'])
 vaegan.eval()
 
@@ -59,7 +60,8 @@ elif args.mode == 'reconstructor':
     dataiter = iter(testloader)
     images, labels = dataiter.next()
     # Get the reconstructed images
-    mu, log_sigma, z, rebuild = vaegan(images)
+    mu, log_sigma = vaegan.encode(images)
+    rebuild = vaegan.decode(mu)
     # Transform for numpy
     ground = np.reshape(images.detach().numpy(), (args.N, 28, 28))
     rebuild = np.reshape(rebuild.detach().numpy(), (args.N, 28, 28))
