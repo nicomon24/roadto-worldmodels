@@ -10,26 +10,30 @@ import torch
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 
-from vae import VAE
+from vae import VAEbyArch
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=32, help="""Size of the image batches.""")
+    # VAE properties
     parser.add_argument('--latent_size', type=int, default=32, help="""Size of the latent vector.""")
-    parser.add_argument('--save_interval', type=int, default=100, help="""How frequently to save a checkpoint.""")
-    parser.add_argument('--dropout', type=float, default=0.9, help="""Dropout probability of dropout.""")
+    parser.add_argument('--arch', type=str, default='base_cr_64', help="""Model architecture.""")
+    parser.add_argument('--dropout', type=float, default=0.0, help="""Dropout probability of dropout.""")
     parser.add_argument('--beta', type=float, default=1.0, help="""Beta parameter.""")
+    parser.add_argument('--alias', type=str, default='base', help="""Alias of the model.""")
+    # Dataset
+    parser.add_argument('--dataset', type=str, default=None, help="""Dataset file to load.""")
+    parser.add_argument('--batch_size', type=int, default=32, help="""Size of the image batches.""")
+    # Training
     parser.add_argument('--epochs', type=str, default='100', help="""Comma separated epochs of training.""")
-    parser.add_argument('--learning_rates', type=str, default='1e-05', help="""Comma separated learning rates. (Must be of the same size of epochs)""")
+    parser.add_argument('--learning_rates', type=str, default='1e-04', help="""Comma separated learning rates. (Must be of the same size of epochs)""")
+    parser.add_argument('--start_epoch', type=int, default=0, help="""Start epoch when loading a checkpoint.""")
+    parser.add_argument('--seed', type=int, default=42, help="""Randomization seed.""")
+    parser.add_argument('--no-cuda', action='store_true', default=False, help='Enables CUDA training')
+    # Logging
+    parser.add_argument('--save_interval', type=int, default=100, help="""How frequently to save a checkpoint.""")
     parser.add_argument('--save_dir', type=str, default='checkpoints', help="""Directory in which checkpoints are saved.""")
     parser.add_argument('--log_dir', type=str, default='logs', help="""Directory in which logs for tensorboard are saved.""")
     parser.add_argument('--vae', type=str, default=None, help="""VAE checkpoint to restore.""")
-    parser.add_argument('--start_epoch', type=int, default=0, help="""Start epoch when loading a checkpoint.""")
-    parser.add_argument('--alias', type=str, default='base', help="""Alias of the model.""")
-    parser.add_argument('--arch', type=str, default='base_car_racing', help="""Model architecture.""")
-    parser.add_argument('--dataset', type=str, default=None, help="""Dataset file to load.""")
-    parser.add_argument('--seed', type=int, default=42, help="""Randomization seed.""")
-    parser.add_argument('--no-cuda', action='store_true', default=False, help='Enables CUDA training')
     args, unparsed = parser.parse_known_args()
     # Check cuda
     args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -52,7 +56,8 @@ if __name__ == '__main__':
     dataset = torch.from_numpy(dataset).float().to(device)
 
     # Create the VAE and the optimizer
-    vae = VAE(arch=args.arch, latent_size=args.latent_size, beta=args.beta, dropout_proba=args.dropout).to(device)
+    VAE_class = VAEbyArch(args.arch)
+    vae = VAE_class(latent_size=args.latent_size, beta=args.beta, dropout_proba=args.dropout).to(device)
     if args.vae:
         # Load a previous VAE model
         vae.load_state_dict(torch.load(args.vae))
@@ -85,12 +90,12 @@ if __name__ == '__main__':
         writer.add_scalar('data/complete_loss', np.mean(total_losses), epoch)
         writer.add_scalar('data/learning_rate', lr, epoch)
         # Check if we need to save
-        if (epoch > 0) and (epoch % args.save_interval == 0):
-            filepath = 'vae_weights/' + args.alias + '-' + str(epoch) + '.torch'
+        if (epoch > 0) and ((epoch+1) % args.save_interval == 0):
+            filepath = 'vae_weights/' + args.alias + '-' + str(epoch+1) + '.torch'
             torch.save(vae.state_dict(), filepath)
 
     # End training
     writer.close()
     # Save last checkpoint
-    filepath = 'vae_weights/' + args.alias + '-' + str(epoch) + '[final].torch'
+    filepath = 'vae_weights/' + args.alias + '-' + str(epoch+1) + '[final].torch'
     torch.save(vae.state_dict(), filepath)

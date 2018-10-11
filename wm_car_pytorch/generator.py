@@ -14,9 +14,9 @@ from tqdm import trange
 import pickle
 import torch
 
-from wrappers import CropCarRacing, ResizeObservation, NormalizeRGB, VAEObservation
+from wrappers import CropCarRacing, ResizeObservation, NormalizeRGB, VAEObservation, Scolorized
 from policy import Policy
-from vae import VAE
+from vae import VAEbyArch
 from utils import NCHW, NHWC
 
 if __name__ == '__main__':
@@ -37,7 +37,8 @@ if __name__ == '__main__':
     # Create env
     env = gym.make('CarRacing-v0')
     env = CropCarRacing(env)
-    env = ResizeObservation(env, (64, 64, 3))
+    env = ResizeObservation(env, (32, 32, 3))
+    env = Scolorized(env, weights=[0.0, 1.0, 0.0])
     env = NormalizeRGB(env)
     env.seed(args.seed)
     np.random.seed(args.seed)
@@ -48,7 +49,8 @@ if __name__ == '__main__':
         policy = Policy(policy_env)
         policy.load_state_dict(torch.load(args.policy))
         policy.eval()
-        vae = VAE(arch=args.arch, latent_size=args.latent_size)
+        VAE_class = VAEbyArch(args.arch)
+        vae = VAE_class(latent_size=args.latent_size)
         vae.load_state_dict(torch.load(args.vae))
         vae.eval()
     # Data generation
@@ -63,11 +65,13 @@ if __name__ == '__main__':
             action = action[0]
         else:
             action = env.action_space.sample()
+            action = [action[0], 0.3, 0.0]
         obs, reward, done, info = env.step(action)
         step += 1
-        env.render()
+        #env.render()
         dataset.append(obs)
         if done or step >= args.horizon:
+            env.seed(args.seed + i)
             obs = env.reset()
             step = 0
 

@@ -6,7 +6,7 @@ import gym, cv2
 import numpy as np
 
 from utils import NCHW, NHWC
-from vae import VAE
+from vae import VAEbyArch
 import torch
 
 '''
@@ -39,12 +39,13 @@ class CropCarRacing(gym.ObservationWrapper):
 '''
 class Scolorized(gym.ObservationWrapper):
 
-    def __init__(self, env):
+    def __init__(self, env, weights):
         gym.ObservationWrapper.__init__(self, env)
         self.observation_space.shape = self.observation_space.shape[:2] + (1,) # Change the channels to 1
+        self.weights = weights
 
     def _observation(self, obs):
-        return np.reshape(np.mean(obs, axis=2), (obs.shape[0], obs.shape[1], 1))
+        return np.reshape(np.average(obs, axis=2, weights=self.weights), (obs.shape[0], obs.shape[1], 1))
 
 '''
     Set the RGB values from [0-255] to [0-1] floats.
@@ -66,8 +67,11 @@ class VAEObservation(gym.ObservationWrapper):
     def __init__(self, env, vae_filepath, arch='base_car_racing', latent_size=32, device=None):
         gym.ObservationWrapper.__init__(self, env)
         # Load VAE
-        self.vae = VAE(arch=arch, latent_size=latent_size)
+        VAE_class = VAEbyArch(arch)
+        self.vae = VAE_class(latent_size=latent_size)
         self.device = device
+        if self.device:
+            self.vae = self.vae.to(self.device)
         assert vae_filepath, "No VAE checkpoint provided."
         self.vae.load_state_dict(torch.load(vae_filepath))
         self.vae.eval()

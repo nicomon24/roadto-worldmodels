@@ -13,13 +13,16 @@ import matplotlib.animation as animation
 import numpy as np
 import torch
 
-from vae import VAE
-from wrappers import CropCarRacing, ResizeObservation, Scolorized, NormalizeRGB
+from vae import VAEbyArch
+from wrappers import CropCarRacing, ResizeObservation, Scolorized, NormalizeRGB, VAEObservation
 from utils import side_by_side, NCHW, NHWC, imshow_bw_or_rgb
+from policy import Policy
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--vae', type=str, default='', help="""Path of a checkpoint to restore.""")
+    parser.add_argument('--vae_old', type=str, default='', help="""VAE used for policy usage.""")
+    parser.add_argument('--policy', type=str, default=None, help="""Policy checkpoint to restore.""")
     parser.add_argument('--latent_size', type=int, default=32, help="""Size of the latent vector.""")
     parser.add_argument('--sample', type=int, default=0, help="""Specify the sample to visualize.""")
     parser.add_argument('--dataset', type=str, default='', help="""Dataset file to load.""")
@@ -42,13 +45,14 @@ if __name__ == '__main__':
         print("Using gym environment directly.")
         env = gym.make('CarRacing-v0')
         env = CropCarRacing(env)
-        env = ResizeObservation(env, (64, 64, 3))
+        env = ResizeObservation(env, (32, 32, 3))
         env = NormalizeRGB(env)
-        # env = Scolorized(env)
+        env = Scolorized(env, weights=[0.0, 1.0, 0.0])
         env.seed(args.seed)
 
     # Network creation
-    vae = VAE(arch=args.arch, latent_size=args.latent_size)
+    VAE_class = VAEbyArch(args.arch)
+    vae = VAE_class(latent_size=args.latent_size).to(device)
     # Restore checkpoint
     assert args.vae, "No checkpoint provided."
     vae.load_state_dict(torch.load(args.vae))
@@ -61,6 +65,16 @@ if __name__ == '__main__':
         imshow_bw_or_rgb(side_by_side(dataset[args.sample], NHWC(rebuild)))
         plt.show()
     else:
+        # Check if we use a policy
+        policy = None
+        if args.policy and args.vae_old:
+            policy_env = VAEObservation(env, args.vae_old, arch=args.arch)
+            policy = Policy(policy_env)
+            policy.load_state_dict(torch.load(args.policy))
+            policy.eval()
+            vae_old = VAE_class(latent_size=args.latent_size).to(device)
+            vae_old.load_state_dict(torch.load(args.vae_old))
+            vae_old.eval()
         # Animation of environment
         obs = env.reset()
         obs_torch = torch.from_numpy(NCHW([obs])).float().to(device)
@@ -68,14 +82,25 @@ if __name__ == '__main__':
         rebuild = NHWC(rebuild.detach().numpy()[0])
 
         fig1 = plt.figure()
-        im = plt.imshow(side_by_side(obs, rebuild))
+        if len(obs.shape) == 3 and (obs.shape[-1]==1):
+            im = plt.imshow(side_by_side(obs, rebuild), cmap="Greys")
+        else:
+            im = plt.imshow(side_by_side(obs, rebuild))
         done = False
 
         # Setting animation update function
         def updatefig(*args):
             global done
+            global obs
             if not done:
-                action = env.action_space.sample()
+                if policy:
+                    obs_torch = torch.from_numpy(NCHW([obs])).float().to(device)
+                    mu, _ = vae.encode(obs_torch)
+                    action, action_proba = policy.act(mu.detach().numpy())
+                    action = action[0]
+                else:
+                    action = env.action_space.sample()
+                    action = [action[0], 0.3, 0.0]
                 obs, reward, done, info = env.step(action)
                 env.render(mode='human')
             else:

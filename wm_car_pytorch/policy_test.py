@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--episodes', type=int, default=10, help="""Number of episodes to render.""")
     parser.add_argument('--no-cuda', action='store_true', default=False, help='Enables CUDA training')
     parser.add_argument('--horizon', type=int, default=1000, help='horizon (default: 1000)')
+    parser.add_argument('--env', type=str, default='CarRacing-v0', help='environment to train on (default: CartPole-v0)')
     args, unparsed = parser.parse_known_args()
     # Check cuda
     args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -29,11 +30,12 @@ if __name__ == '__main__':
 
     assert args.vae, "You need to provide a VAE file."
     assert args.policy, "You need to provide a policy file."
-    env = gym.make('CarRacing-v0')
+    env = gym.make(args.env)
     env = CropCarRacing(env)
-    env = ResizeObservation(env, (64, 64, 3))
+    env = ResizeObservation(env, (32, 32, 3))
+    env = Scolorized(env, weights=[0.0, 1.0, 0.0])
     env = NormalizeRGB(env)
-    env = VAEObservation(env, args.vae)
+    env = VAEObservation(env, args.vae, arch=args.arch)
 
     policy = Policy(env)
     policy.load_state_dict(torch.load(args.policy))
