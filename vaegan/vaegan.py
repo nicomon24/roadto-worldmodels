@@ -204,13 +204,13 @@ class VAEGAN(nn.Module):
         encoder_loss.backward(retain_graph=True)
         encoder_optimizer.step()
 
-        decoder_optimizer.zero_grad()
-        decoder_loss.backward(retain_graph=True)
-        decoder_optimizer.step()
+        #decoder_optimizer.zero_grad()
+        #decoder_loss.backward(retain_graph=True)
+        #decoder_optimizer.step()
 
-        discriminator_optimizer.zero_grad()
-        discriminator_loss.backward()
-        discriminator_optimizer.step()
+        #discriminator_optimizer.zero_grad()
+        #discriminator_loss.backward()
+        #discriminator_optimizer.step()
 
         return prior_loss, dislike_loss, gan_loss
 
