@@ -26,15 +26,19 @@ class VAEGAN(nn.Module):
         self.beta = beta
         # Check input shape
         assert len(input_shape) == 3, "Input shape must be 3D for images."
+
+        # Create convolutional layers
         self.convolutional_layers = []
         prev_channels = input_shape[0]
         prev_shape = input_shape
         for channels, kernel_size, stride in convs:
-            # Create the new layer
             layer = nn.Sequential(nn.Conv2d(prev_channels, channels, kernel_size, stride=stride), nn.ReLU())
             self.convolutional_layers.append(layer)
             prev_channels = channels
             prev_shape = [channels, conv_output_size(prev_shape[1], kernel_size, stride=stride), conv_output_size(prev_shape[2], kernel_size, stride=stride)]
+        # Create module list
+        self.convolutional_layers = nn.ModuleList(self.convolutional_layers)
+
         # Encoder last layers
         flattened_final_shape = np.prod(prev_shape)
         self.encoder_mean_layer = nn.Linear(flattened_final_shape, self.latent_size)
@@ -53,6 +57,8 @@ class VAEGAN(nn.Module):
         # Last deconv layer
         layer = nn.Sequential(nn.ConvTranspose2d(convs[0][0], input_shape[0], convs[0][1], stride=convs[0][2]), nn.Sigmoid())
         self.deconvolutional_layers.append(layer)
+        # Create module list
+        self.deconvolutional_layers = nn.ModuleList(self.deconvolutional_layers)
 
         # Initialization
         for m in self.modules():
