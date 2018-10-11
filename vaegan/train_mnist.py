@@ -78,7 +78,8 @@ for epoch in trange(args.epochs):  # loop over the dataset multiple times
 # Save the model for inference
 state = {
     'state_dict': vaegan.state_dict(),
-    'latent_size': vaegan.latent_size
+    'latent_size': vaegan.latent_size,
+    'convs': CONVS
 }
 # Create savedir if necessary
 if not os.path.exists(args.savedir):
