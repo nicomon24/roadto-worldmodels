@@ -48,7 +48,8 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size, sh
 
 # Create VAEGAN
 CONVS = [(32, 4, 2), (64, 4, 1), (128, 4, 1), (256, 4, 1)]
-vaegan = VAEGAN(trainset[0][0].shape, latent_size=args.latent_size, convs=CONVS).to(device)
+input_shape = trainset[0][0].detach().numpy().shape
+vaegan = VAEGAN(input_shape, latent_size=args.latent_size, convs=CONVS).to(device)
 # Optimizer
 optimizer = optim.Adam(vaegan.parameters(), lr=args.lr)
 
