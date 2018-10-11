@@ -183,6 +183,7 @@ class VAEGAN(nn.Module):
         mse = mse.view(mse.size(0), -1)
         dislike_loss = torch.mean(-0.5 * torch.sum(mse, dim=1))
 
+        print("DIS_TRUE", dis_true, dis_rebuild, dis_noise)
         # GAN loss
         gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
 
@@ -199,8 +200,8 @@ class VAEGAN(nn.Module):
         encoder_loss = prior_loss + dislike_loss
         decoder_loss = gamma * dislike_loss - gan_loss
         discriminator_loss = gan_loss
-        print(prior_loss, dislike_loss, gan_loss)
-        print(encoder_loss, decoder_loss, discriminator_loss)
+        print("LOSS1", prior_loss, dislike_loss, gan_loss)
+        print("LOSS2", encoder_loss, decoder_loss, discriminator_loss)
 
         # Backward
         encoder_optimizer.zero_grad()
