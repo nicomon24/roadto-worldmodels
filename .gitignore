@@ -1,6 +1,8 @@
 .ipynb_checkpoints
 **/*.ckpt*
 *.pkl
+*.torch
+**/mnist_data/
 **/__pycache__
 **/.cache
 **/logs/
