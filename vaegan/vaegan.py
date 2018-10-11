@@ -173,6 +173,7 @@ class VAEGAN(nn.Module):
         # Prior loss: KL-divergence
         prior_loss = torch.mean(-0.5 * torch.sum(1 + log_sigma - mu**2 - log_sigma.exp(), dim=1))
         if torch.isnan(prior_loss):
+            print(self.encoder.encoder_mean_layer.weight)
             print(log_sigma)
             print(mu)
             exit(0)
