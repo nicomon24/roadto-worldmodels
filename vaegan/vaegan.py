@@ -201,12 +201,13 @@ class VAEGAN(nn.Module):
 
         # Backward
         encoder_optimizer.zero_grad()
+        decoder_optimizer.zero_grad()
+
         encoder_loss.backward(retain_graph=True)
         encoder_optimizer.step()
 
-        #decoder_optimizer.zero_grad()
-        #decoder_loss.backward(retain_graph=True)
-        #decoder_optimizer.step()
+        decoder_loss.backward(retain_graph=True)
+        decoder_optimizer.step()
 
         #discriminator_optimizer.zero_grad()
         #discriminator_loss.backward()
