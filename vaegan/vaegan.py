@@ -127,7 +127,7 @@ class VAEGAN(nn.Module):
 
         # Initialization
         for m in self.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
                 #nn.init.xavier_normal_(m.weight, gain=1)
                 nn.init.normal_(m.weight, mean=0, std=0.1)
 
