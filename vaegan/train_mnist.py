@@ -25,6 +25,7 @@ parser.add_argument('--batch_size', type=int, default=16, help='Batch size.')
 parser.add_argument('--latent_size', type=int, default=32, help='Latent vector size.')
 parser.add_argument('--epochs', type=int, default=10, help='Training epochs.')
 parser.add_argument('--lr', type=float, default=0.001, help='Learning rate. (default: 0.001)')
+parser.add_argument('--gamma', type=float, default=1.0, help='Gamma parameter. (default: 1.0)')
 parser.add_argument('--seed', type=int, default=42, help='Random seed.')
 parser.add_argument('--logdir', type=str, default='logs', help='Logging directory.')
 parser.add_argument('--name', type=str, default='base', help='Name for the run.')
@@ -67,7 +68,7 @@ for epoch in trange(args.epochs):  # loop over the dataset multiple times
         # Get the inputs
         inputs, labels = data
         # Optimize and compute losses
-        prior_loss, dislike_loss, gan_loss, reco_loss = vaegan.optimize(inputs.to(device), args.lr, gamma=1.0)
+        prior_loss, dislike_loss, gan_loss, reco_loss = vaegan.optimize(inputs.to(device), args.lr, gamma=args.gamma)
         # Log
         global_i += 1
         writer.add_scalar('data/prior_loss', prior_loss, global_i)
