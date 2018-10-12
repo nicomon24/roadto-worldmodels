@@ -176,7 +176,7 @@ class VAEGAN(nn.Module):
         reco_loss = torch.mean(torch.sum(mse_reco, dim=1))
 
         # GAN loss
-        gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
+        gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild))
 
         return prior_loss, reco_loss, gan_loss
 
