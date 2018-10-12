@@ -109,10 +109,9 @@ class DiscriminatorModule(nn.Module):
         # Pass the convolutional layers
         for conv_layer in self.discriminator_layers:
             x = conv_layer(x)
-        last_layer_data = x
         # Reshape to 2D for linear layers
         x = x.view(x.shape[0], -1)
-        return self.discriminator_proba(x), last_layer_data
+        return self.discriminator_proba(x)
 
 class VAEGAN(nn.Module):
 
@@ -160,63 +159,50 @@ class VAEGAN(nn.Module):
         rebuild = self.decode(z)
         assert x.shape == rebuild.shape, 'Image dimension not aligned.'
         # Discriminator on sample and sample's reconstruction
-        dis_true, dis_l_true = self.discriminate(x)
-        dis_rebuild, dis_l_rebuild = self.discriminate(rebuild)
-        # Generate noise and decode
-        noise = torch.randn(z.shape[0], z.shape[1]).to(self.default_device)
-        rebuild_noise = self.decode(noise)
-        dis_noise, dis_l_noise = self.discriminate(rebuild_noise)
-        return mu, log_sigma, z, rebuild, dis_true, dis_l_true, dis_rebuild, dis_l_rebuild, dis_noise, dis_l_noise
+        dis_true = self.discriminate(x)
+        dis_rebuild = self.discriminate(rebuild)
+        return mu, log_sigma, z, rebuild, dis_true, dis_rebuild
 
     def losses(self, x):
         # Forward pass
-        mu, log_sigma, z, rebuild, dis_true, dis_l_true, dis_rebuild, dis_l_rebuild, dis_noise, dis_l_noise = self(x)
+        mu, log_sigma, z, rebuild, dis_true, dis_rebuild = self(x)
 
         # Prior loss: KL-divergence
         prior_loss = torch.mean(-0.5 * torch.sum(1 + log_sigma - mu**2 - log_sigma.exp(), dim=1))
 
-        # Dis-like loss
-        mse = ((dis_l_true-dis_l_rebuild)**2)
-        mse = mse.view(mse.size(0), -1)
-        dislike_loss = torch.mean(torch.sum(mse, dim=1))
-
-        # GAN loss
-        gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
-
-        # Reco loss for comparison
+        # Reconstruction loss
         mse_reco = ((x-rebuild)**2)
         mse_reco = mse_reco.view(mse_reco.size(0), -1)
         reco_loss = torch.mean(torch.sum(mse_reco, dim=1))
 
-        return prior_loss, dislike_loss, gan_loss, reco_loss
+        # GAN loss
+        gan_loss = torch.mean(torch.log(dis_true) + torch.log(1-dis_rebuild) + torch.log(1-dis_noise))
 
-    def optimize(self, x, lr=1e-4, gamma=1.0):
+        return prior_loss, reco_loss, gan_loss
+
+    def optimize(self, x, lr=1e-4):
         # Create the 3 optimizers
         encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=lr)
         decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=lr)
         discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=lr)
         # Get losses
-        prior_loss, dislike_loss, gan_loss, reco_loss = self.losses(x)
+        prior_loss, reco_loss, gan_loss = self.losses(x)
         # Module losses
-        encoder_loss = prior_loss + dislike_loss
-        decoder_loss = gamma * dislike_loss - gan_loss
-        discriminator_loss = gan_loss
+        vae_loss = prior_loss + reco_loss
 
         # Backward
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
         discriminator_optimizer.zero_grad()
 
-        encoder_loss.backward(retain_graph=True)
+        vae_loss.backward(retain_graph=True)
         encoder_optimizer.step()
-
-        decoder_loss.backward(retain_graph=True)
         decoder_optimizer.step()
 
-        discriminator_loss.backward()
+        gan_loss.backward()
         discriminator_optimizer.step()
 
-        return prior_loss, dislike_loss, gan_loss, reco_loss
+        return prior_loss, reco_loss, gan_loss
 
 if __name__ == '__main__':
     # Perform tests
