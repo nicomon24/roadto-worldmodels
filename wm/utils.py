@@ -3,7 +3,6 @@
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 def NCHW(x):
     x = np.array(x)
@@ -24,6 +23,7 @@ def NHWC(x):
         raise Exception("Unrecognized shape.")
 
 def imshow_bw_or_rgb(img):
+    import matplotlib.pyplot as plt
     if len(img.shape) == 2:
         plt.imshow(img, cmap="Greys")
     elif len(img.shape) == 3 and img.shape[-1] == 1:
@@ -37,6 +37,7 @@ def side_by_side(img1, img2, SIZE=4):
     '''
         This function
     '''
+    import matplotlib.pyplot as plt
     if len(img1.shape) == 2:
         return np.concatenate([img1, np.ones((img1.shape[0], SIZE)), img2], axis=1)
     elif len(img1.shape) == 3:
