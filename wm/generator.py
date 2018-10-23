@@ -64,7 +64,7 @@ class Worker(Process):
             if command == 'generate':
                 episode_observations, episode_actions = self.generate_episode()
                 self.output.put((worker_id, episode_observations, episode_actions))
-            elif command = 'exit':
+            elif command == 'exit':
                 self.env.close()
                 break
 
