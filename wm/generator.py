@@ -91,7 +91,7 @@ class ParallelGenerator(object):
     def generate(self, size):
         total_steps = 0
         for i in range(self.n_workers):
-            self.input_queues[i].put('generate')
+            self.input_queues[i].put(('generate', i))
             self.events[i].set()
 
         observations = []
@@ -109,7 +109,7 @@ class ParallelGenerator(object):
 
     def close(self):
         for i in range(self.n_workers):
-            self.input_queues[i].put('exit')
+            self.input_queues[i].put(('exit', i))
         for e in self.events:
             e.set()
         for w in self.workers:
