@@ -133,9 +133,9 @@ if __name__ == '__main__':
     # Env creation function
     def make_env(seed):
         env = gym.make('CarRacing-v0')
+        env = NormalizeRGB(env)
         env = CropCarRacing(env)
         env = ResizeObservation(env, (64, 64, 3))
-        env = NormalizeRGB(env)
         print("what", seed)
         env.seed(seed)
         np.random.seed(seed)

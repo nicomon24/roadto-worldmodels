@@ -15,8 +15,9 @@ class ResizeObservation(gym.ObservationWrapper):
 
     def __init__(self, env, size):
         gym.ObservationWrapper.__init__(self, env)
-        self.env.observation_space.shape = size
         self.size = size
+        self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low), high=np.max(self.observation_space.high),
+                                    shape=self.size)
 
     def _observation(self, obs):
         return cv2.resize(obs, dsize=self.size[:2])
@@ -28,7 +29,8 @@ class CropCarRacing(gym.ObservationWrapper):
 
     def __init__(self, env):
         gym.ObservationWrapper.__init__(self, env)
-        self.observation_space.shape = (84, 96, 3)
+        self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low), high=np.max(self.observation_space.high),
+                                    shape=(84, 96, 3))
 
     def _observation(self, obs):
         return obs[:84,:,:]
@@ -40,7 +42,8 @@ class Scolorized(gym.ObservationWrapper):
 
     def __init__(self, env, weights):
         gym.ObservationWrapper.__init__(self, env)
-        self.observation_space.shape = self.observation_space.shape[:2] + (1,) # Change the channels to 1
+        self.observation_space.shape = self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low), high=np.max(self.observation_space.high),
+                                    shape=self.observation_space.shape[:2] + (1,)) # Change the channels to 1
         self.weights = weights
 
     def _observation(self, obs):
