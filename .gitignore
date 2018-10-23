@@ -3,6 +3,7 @@
 *.pkl
 *.torch
 **/mnist_data/
+**/cifar_data/
 **/__pycache__
 **/.cache
 **/logs/
