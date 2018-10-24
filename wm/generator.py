@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue, Event
 import gym, time, argparse, cv2, uuid, os
 from gym import wrappers, logger
 import numpy as np
-from tqdm import trange
+from tqdm import trange, tqdm
 import torch
 
 from wrappers import CropCarRacing, ResizeObservation, NormalizeRGB
@@ -101,19 +101,21 @@ class ParallelGenerator(object):
             w.start()
 
     def generate(self, size):
-        total_steps = 0
-        for i in range(self.n_workers):
-            self.input_queues[i].put(('generate', i))
-            self.events[i].set()
+        with tqdm(total=size) as pbar:
+            total_steps = 0
+            for i in range(self.n_workers):
+                self.input_queues[i].put(('generate', i))
+                self.events[i].set()
 
-        observations = []
-        actions = []
-        while total_steps < size:
-            id = self.output_queue.get()
-            total_steps += 1
-            if total_steps < (size - self.n_workers+1):
-                self.input_queues[id].put(('generate', id))
-                self.events[id].set()
+            observations = []
+            actions = []
+            while total_steps < size:
+                id = self.output_queue.get()
+                total_steps += 1
+                pbar.update(1)
+                if total_steps < (size - self.n_workers+1):
+                    self.input_queues[id].put(('generate', id))
+                    self.events[id].set()
 
         return total_steps
 
