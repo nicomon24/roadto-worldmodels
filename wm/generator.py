@@ -15,11 +15,9 @@ import torch
 from wrappers import CropCarRacing, ResizeObservation, NormalizeRGB
 from utils import NCHW, NHWC, select_n_workers
 
-
-
 class Worker(Process):
 
-    def __init__(self, input, output, event, make_env, make_model, horizon, seed):
+    def __init__(self, input, output, event, make_env, make_model, horizon, seed, dir):
         super(Worker, self).__init__()
         self.input = input
         self.output = output
@@ -28,6 +26,7 @@ class Worker(Process):
         self.make_model = make_model
         self.horizon = horizon
         self.seed = seed
+        self.dir = dir
 
     def generate_episode(self):
         # Aggregators
@@ -52,6 +51,9 @@ class Worker(Process):
         return episode_observations, episode_actions
 
     def run(self):
+        # Aggregators of observations and actions
+        observations = []
+        actions = []
         # Make env and model
         self.env = self.make_env(self.seed)
         self.model = self.make_model()
@@ -63,18 +65,29 @@ class Worker(Process):
             command, worker_id = self.input.get()
             if command == 'generate':
                 episode_observations, episode_actions = self.generate_episode()
-                self.output.put((worker_id, episode_observations, episode_actions))
+                observations.append(episode_observations)
+                actions.append(episode_actions)
+                self.output.put(worker_id)
             elif command == 'exit':
                 self.env.close()
+                # Save the observations and actions
+                observations = np.array(observations)
+                actions = np.array(actions)
+                # Generate random filename and save
+                filename = self.dir + '/' + str(uuid.uuid4()) + '.npz'
+                np.savez_compressed(filename, obs=observations, action=actions)
+                # Close the env, we are done
+                env.close()
                 break
 
 class ParallelGenerator(object):
 
-    def __init__(self, make_env, make_model, horizon, n_workers=-1, seed=0):
+    def __init__(self, make_env, make_model, horizon, n_workers=-1, seed=0, dir=None):
         self.make_env = make_env
         self.make_model = make_model
         self.seed = seed
         self.horizon = horizon
+        self.dir = dir
         # Get the number of workers
         self.n_workers = select_n_workers(n_workers)
         print('Using', self.n_workers, 'workers.')
@@ -83,7 +96,8 @@ class ParallelGenerator(object):
         self.input_queues = [Queue() for _ in range(self.n_workers)]
         self.events = [Event() for _ in range(self.n_workers)]
         self.workers = [Worker(self.input_queues[i], self.output_queue, self.events[i],
-                            self.make_env, self.make_model, self.horizon, self.seed+i) for i in range(self.n_workers)]
+                            self.make_env, self.make_model, self.horizon, self.seed+i,
+                            self.dir) for i in range(self.n_workers)]
         # Start the workers
         for w in self.workers:
             w.start()
@@ -97,15 +111,13 @@ class ParallelGenerator(object):
         observations = []
         actions = []
         while total_steps < size:
-            id, episode_observations, episode_actions = self.output_queue.get()
-            observations.append(episode_observations)
-            actions.append(episode_actions)
+            id = self.output_queue.get()
             total_steps += 1
             if total_steps < (size - self.n_workers+1):
                 self.input_queues[id].put(('generate', id))
                 self.events[id].set()
 
-        return np.array(observations), np.array(actions)
+        return total_steps
 
     def close(self):
         for i in range(self.n_workers):
@@ -129,6 +141,9 @@ if __name__ == '__main__':
     # Check cuda
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if args.cuda else "cpu")
+    # Check that dir exists
+    if not os.path.exists(args.dir):
+        os.makedirs(args.dir)
 
     # Env creation function
     def make_env(seed):
@@ -145,24 +160,8 @@ if __name__ == '__main__':
         return None
 
     # Create parallel generator
-    generator = ParallelGenerator(make_env, make_model, horizon=args.horizon, n_workers=args.n_workers, seed=args.seed)
-    observations, actions = generator.generate(args.size)
-
-    print(observations.shape, actions.shape)
+    generator = ParallelGenerator(make_env, make_model, horizon=args.horizon, n_workers=args.n_workers, seed=args.seed, dir=args.dir)
+    total_episodes = generator.generate(args.size)
+    print("Generated", total_episodes, "total episodes.")
 
     generator.close()
-
-    '''
-    # Numpify global
-    observations = np.array(observations)
-    actions = np.array(actions)
-    # Check that dir exists
-    if not os.path.exists(args.dir):
-        os.makedirs(args.dir)
-    # Generate random filename and save
-    filename = args.dir + '/' + str(uuid.uuid4()) + '.npz'
-    np.savez_compressed(filename, obs=observations, action=actions)
-
-    # Close the env, we are done
-    env.close()
-    '''
