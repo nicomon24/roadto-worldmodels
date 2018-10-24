@@ -76,8 +76,6 @@ class Worker(Process):
                 # Generate random filename and save
                 filename = self.dir + '/' + str(uuid.uuid4()) + '.npz'
                 np.savez_compressed(filename, obs=observations, action=actions)
-                # Close the env, we are done
-                env.close()
                 break
 
 class ParallelGenerator(object):
