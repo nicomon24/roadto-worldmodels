@@ -149,7 +149,6 @@ if __name__ == '__main__':
         env = NormalizeRGB(env)
         env = CropCarRacing(env)
         env = ResizeObservation(env, (64, 64, 3))
-        print("what", seed)
         env.seed(seed)
         np.random.seed(seed)
         return env
