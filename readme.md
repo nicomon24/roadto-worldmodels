@@ -2,6 +2,8 @@
 This repository contains a collection of work in order to implement a system as described in [World Models](https://worldmodels.github.io).
 The complete system will later be evaluated on different sets of environments.
 
+**DISCLAIMER**: this repository is still messy and will be restructured in the next months.
+
 ## List of Contents
 
 1. **VAE_MNIST**: implementation of a simple Variational AutoEncoder[1] using TF and tested on the MNIST dataset.
